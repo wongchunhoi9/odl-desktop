@@ -17,9 +17,12 @@ odl-desktop/
 │   ├── java_check.py        # verifies Java 11+ is on PATH before we let anyone hit Convert
 │   └── prefs.py             # persists last-used settings to ~/Library/Application Support
 ├── ui/
-│   ├── index.html
+│   ├── index.html           # includes a link to the OpenDataLoader docs in the titlebar
 │   ├── style.css
 │   └── app.js
+├── assets/
+│   ├── icon_1024.png        # source art for the app icon (OpenDataLoader otter mark + wordmark)
+│   └── AppIcon.icns         # compiled icon, referenced by setup.py's OPTIONS["iconfile"]
 ├── requirements.txt
 ├── setup.py                # py2app config for building a double-clickable .app later
 └── README.md
@@ -69,6 +72,11 @@ dependency scanner misses a handful of `@rpath`-linked dylibs (`libffi`, `libssl
 fails to launch with `Library not loaded: @rpath/lib*.dylib`. `setup.py`'s `_find_conda_dylibs()`
 locates and bundles them explicitly via `OPTIONS["frameworks"]`; if it raises, your conda env is
 missing one of those libs under `<sys.base_prefix>/lib`.
+
+`assets/icon_1024.png` is the OpenDataLoader otter mark (fetched from opendataloader.org) on a
+rounded off-white square with an "ODL Desktop" wordmark added underneath, compiled to
+`assets/AppIcon.icns` via `iconutil`. This app is an unofficial community wrapper, not affiliated
+with the OpenDataLoader project — swap in different art if that distinction matters for your use.
 
 ## Notes / things left intentionally simple for now
 

@@ -62,7 +62,7 @@ OPTIONS = {
     "packages": ["webview"],
     "includes": ["opendataloader_pdf"],
     "frameworks": _find_conda_dylibs(),
-    "iconfile": None,  # point at a .icns file here once you have one
+    "iconfile": "assets/AppIcon.icns",
     "plist": {
         "CFBundleName": "ODL Desktop",
         "CFBundleDisplayName": "ODL Desktop",

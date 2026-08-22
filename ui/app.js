@@ -180,6 +180,11 @@ function wireStaticControls() {
     persistSettings();
   });
 
+  document.getElementById("link-docs").addEventListener("click", (e) => {
+    e.preventDefault();
+    api("open_docs");
+  });
+
   document.getElementById("btn-hybrid-toggle").addEventListener("click", onHybridToggleClick);
   document.getElementById("chk-hybrid-enabled").addEventListener("change", () => {
     persistSettings();

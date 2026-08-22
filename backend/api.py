@@ -20,6 +20,8 @@ from backend.converter import run_conversion
 from backend.hybrid_server import manager as hybrid_manager
 from backend.java_check import check_java
 
+DOCS_URL = "https://opendataloader.org/docs"
+
 
 class Api:
     def __init__(self):
@@ -90,6 +92,11 @@ class Api:
         if not target.exists():
             return {"ok": False, "error": "Path does not exist."}
         subprocess.run(["open", str(target)])
+        return {"ok": True}
+
+    def open_docs(self) -> dict:
+        """Opens the OpenDataLoader documentation in the user's default browser."""
+        subprocess.run(["open", DOCS_URL])
         return {"ok": True}
 
     # ---- hybrid backend --------------------------------------------------

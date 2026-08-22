@@ -65,6 +65,17 @@ html, body {
   font-size: 12px;
   color: var(--ink-muted);
 }
+.titlebar-link {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.titlebar-link:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
 
 /* ---- layout ------------------------------------------------------------ */
 .layout {
