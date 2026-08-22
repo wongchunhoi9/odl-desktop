@@ -47,7 +47,12 @@ def _find_conda_dylibs() -> list:
 
 
 APP = ["app.py"]
-DATA_FILES = [("ui", ["ui/index.html", "ui/style.css", "ui/app.js"])]
+DATA_FILES = [
+    ("ui", ["ui/index.html", "ui/style.css", "ui/app.js"]),
+    # Apache License 2.0 §4 attribution for the bundled opendataloader-pdf
+    # dependency — see THIRD_PARTY_NOTICES.md for why this travels with the app.
+    (".", ["THIRD_PARTY_NOTICES.md", "THIRD_PARTY_LICENSE.txt"]),
+]
 OPTIONS = {
     "argv_emulation": False,
     # NOTE: "opendataloader_pdf" is deliberately NOT in `packages`. That option

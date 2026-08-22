@@ -21,10 +21,12 @@ odl-desktop/
 │   ├── style.css
 │   └── app.js
 ├── assets/
-│   ├── icon_1024.png        # source art for the app icon (OpenDataLoader otter mark + wordmark)
+│   ├── icon_1024.png        # source art for the app icon (original design — see licensing note below)
 │   └── AppIcon.icns         # compiled icon, referenced by setup.py's OPTIONS["iconfile"]
 ├── requirements.txt
 ├── setup.py                # py2app config for building a double-clickable .app later
+├── THIRD_PARTY_NOTICES.md  # Apache-2.0 attribution for the bundled opendataloader-pdf dependency
+├── THIRD_PARTY_LICENSE.txt # full Apache 2.0 text, copied from opendataloader-pdf's own LICENSE
 └── README.md
 ```
 
@@ -73,10 +75,26 @@ fails to launch with `Library not loaded: @rpath/lib*.dylib`. `setup.py`'s `_fin
 locates and bundles them explicitly via `OPTIONS["frameworks"]`; if it raises, your conda env is
 missing one of those libs under `<sys.base_prefix>/lib`.
 
-`assets/icon_1024.png` is the OpenDataLoader otter mark (fetched from opendataloader.org) on a
-rounded off-white square with an "ODL Desktop" wordmark added underneath, compiled to
-`assets/AppIcon.icns` via `iconutil`. This app is an unofficial community wrapper, not affiliated
-with the OpenDataLoader project — swap in different art if that distinction matters for your use.
+`assets/icon_1024.png` is original artwork (a document glyph + export arrow on a rounded off-white
+square, with an "ODL Desktop" wordmark), compiled to `assets/AppIcon.icns` via `iconutil`. It does
+**not** reuse OpenDataLoader's own logo — see [Licensing](#licensing) for why.
+
+## Licensing
+
+ODL Desktop's own code has no license file yet (add one before distributing it publicly — MIT or
+Apache-2.0 are the usual choices for a thin wrapper like this).
+
+It depends on and bundles [`opendataloader-pdf`](https://pypi.org/project/opendataloader-pdf/)
+(Apache License 2.0, © Hancom, Inc.). Apache-2.0 permits using, depending on, and redistributing
+that package — including inside this app's `.app` bundle — but **§6 (Trademarks)** explicitly does
+*not* grant rights to OpenDataLoader's name, logo, or other marks. Concretely:
+
+- Calling `opendataloader_pdf.convert()` from [converter.py](backend/converter.py) and shipping the
+  package inside the packaged app: fine, covered by the license.
+- Reusing OpenDataLoader's actual logo as this app's icon or branding: **not** covered — doing so
+  earlier was a mistake, since fixed by swapping in the original artwork described above.
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [THIRD_PARTY_LICENSE.txt](THIRD_PARTY_LICENSE.txt)
+  carry the required §4 attribution forward — `setup.py` bundles both into the packaged `.app`.
 
 ## Notes / things left intentionally simple for now
 
