@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ODL Desktop</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="env-banner" class="env-banner hidden">
+    <span id="env-banner-text"></span>
+  </div>
+
+  <header class="titlebar">
+    <h1>ODL Desktop</h1>
+    <span class="titlebar-sub">PDF → Markdown / JSON / HTML, locally</span>
+  </header>
+
+  <main class="layout">
+
+    <!-- 1. Source & Output -->
+    <section class="card" id="section-source">
+      <h2 class="card-title">Source &amp; output</h2>
+
+      <div class="dropzone" id="dropzone">
+        <p class="dropzone-label">Drag PDFs or a folder here</p>
+        <div class="dropzone-actions">
+          <button class="btn btn-secondary" id="btn-choose-files">Choose Files…</button>
+          <button class="btn btn-secondary" id="btn-choose-folder">Choose Folder…</button>
+        </div>
+      </div>
+
+      <ul class="chip-list" id="input-chip-list"></ul>
+
+      <label class="checkbox-row">
+        <input type="checkbox" id="chk-subfolders" />
+        <span>Include subfolders</span>
+      </label>
+
+      <div class="field-row">
+        <label class="field-label" for="output-dir">Output folder</label>
+        <div class="field-with-button">
+          <input type="text" id="output-dir" readonly placeholder="Choose an output folder…" />
+          <button class="btn btn-secondary" id="btn-choose-output">Browse…</button>
+        </div>
+      </div>
+
+      <p class="hint" id="input-summary">No files selected yet.</p>
+    </section>
+
+    <!-- 2 & 3: options row -->
+    <div class="options-row">
+
+      <!-- 2. Conversion options -->
+      <section class="card" id="section-options">
+        <h2 class="card-title">Conversion options</h2>
+
+        <fieldset class="field-group">
+          <legend>Output formats</legend>
+          <label class="checkbox-row"><input type="checkbox" class="fmt-check" value="markdown" checked /> Markdown</label>
+          <label class="checkbox-row"><input type="checkbox" class="fmt-check" value="json" /> JSON</label>
+          <label class="checkbox-row"><input type="checkbox" class="fmt-check" value="html" /> HTML</label>
+          <label class="checkbox-row"><input type="checkbox" class="fmt-check" value="pdf" /> PDF (tagged)</label>
+          <label class="checkbox-row"><input type="checkbox" class="fmt-check" value="markdown-with-images" /> Markdown + images</label>
+        </fieldset>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="chk-header-footer" />
+          <span>Include headers &amp; footers</span>
+        </label>
+
+        <div class="field-row">
+          <label class="field-label" for="sel-table-method">Table detection</label>
+          <select id="sel-table-method">
+            <option value="default">Default (border-based)</option>
+            <option value="cluster">Cluster (border + spacing)</option>
+          </select>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label" for="sel-reading-order">Reading order</label>
+          <select id="sel-reading-order">
+            <option value="xycut">XY-Cut (default)</option>
+            <option value="off">Off</option>
+          </select>
+        </div>
+
+        <div class="field-row">
+          <label class="field-label" for="sel-image-output">Images</label>
+          <select id="sel-image-output">
+            <option value="off">Off</option>
+            <option value="embedded">Embedded (base64)</option>
+            <option value="external">External files</option>
+          </select>
+        </div>
+
+        <div class="field-row hidden" id="row-image-format">
+          <label class="field-label" for="sel-image-format">Image format</label>
+          <select id="sel-image-format">
+            <option value="png">PNG</option>
+            <option value="jpeg">JPEG</option>
+          </select>
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="chk-sanitize" />
+          <span>Sanitize sensitive data (emails, phones, IPs, URLs)</span>
+        </label>
+
+        <div class="field-row">
+          <label class="field-label" for="input-page-range">Page range</label>
+          <input type="text" id="input-page-range" placeholder="e.g. 1,3,5-7 (single file only)" />
+        </div>
+      </section>
+
+      <!-- 3. Hybrid / OCR backend -->
+      <section class="card card-hybrid" id="section-hybrid" data-state="stopped">
+        <h2 class="card-title">
+          Hybrid / OCR backend
+          <span class="status-dot" id="hybrid-status-dot"></span>
+        </h2>
+        <p class="hint" id="hybrid-status-text">Not running</p>
+
+        <p class="section-label">Backend startup settings</p>
+        <p class="hint hint-tight">Set these before starting — changing them requires a restart.</p>
+
+        <div class="field-row">
+          <label class="field-label" for="input-hybrid-port">Port</label>
+          <input type="number" id="input-hybrid-port" value="5002" />
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="chk-force-ocr" />
+          <span>Force OCR</span>
+        </label>
+
+        <div class="field-row" id="row-ocr-lang">
+          <label class="field-label" for="input-ocr-lang">OCR languages</label>
+          <input type="text" id="input-ocr-lang" placeholder="en, ko, ja" />
+        </div>
+
+        <div class="enrichment-group" id="enrichment-group">
+          <label class="checkbox-row">
+            <input type="checkbox" id="chk-enrich-formula" />
+            <span>Formula recognition</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="chk-enrich-picture" />
+            <span>Picture descriptions</span>
+          </label>
+          <p class="hint hint-tight">Enrichment output only reaches the file when Mode is set to Full below.</p>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="btn-hybrid-toggle">Start Backend</button>
+
+        <p class="section-label section-label-spaced">Per-run settings</p>
+
+        <label class="checkbox-row">
+          <input type="checkbox" id="chk-hybrid-enabled" disabled />
+          <span>Enable hybrid processing for this run</span>
+        </label>
+
+        <div class="field-row">
+          <label class="field-label" for="sel-hybrid-mode">Mode</label>
+          <select id="sel-hybrid-mode" disabled>
+            <option value="auto">Auto (route complex pages only)</option>
+            <option value="full">Full (force all pages through AI)</option>
+          </select>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 4. Run controls -->
+    <section class="card run-bar" id="section-run">
+      <button class="btn btn-primary btn-large" id="btn-convert" disabled>Convert</button>
+      <button class="btn btn-secondary hidden" id="btn-cancel">Cancel</button>
+      <div class="progress-wrap hidden" id="progress-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <span class="progress-label" id="progress-label"></span>
+    </section>
+
+    <!-- 5. Log / results -->
+    <section class="card" id="section-log">
+      <details id="log-details">
+        <summary>Show details</summary>
+        <pre class="log-output" id="log-output"></pre>
+      </details>
+
+      <ul class="results-list" id="results-list"></ul>
+
+      <button class="btn btn-secondary hidden" id="btn-open-output">Open Output Folder</button>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

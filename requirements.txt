@@ -1,0 +1,2 @@
+pywebview>=5.0
+opendataloader-pdf[hybrid]>=1.12.0
