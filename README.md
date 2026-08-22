@@ -47,17 +47,28 @@ You also need:
 python app.py
 ```
 
-## Package as a .app (later)
-
-Once the app works the way you want, package it with `py2app`:
+## Package as a .app
 
 ```bash
 pip install py2app
 python setup.py py2app
 ```
 
-The built app will land in `dist/ODL Desktop.app`. Since it isn't notarized, the first launch
-needs a right-click → Open to get past Gatekeeper.
+The built app lands in `dist/ODL Desktop.app`. Since it isn't notarized, the first launch needs a
+right-click → Open to get past Gatekeeper.
+
+`setup.py` deliberately does **not** put `opendataloader_pdf` in py2app's `packages` list — that
+option bundles a package's entire submodule tree recursively, which would drag in
+`hybrid_server.py`'s `docling`/`torch` imports (unused here; the hybrid backend runs as a separate
+subprocess, not an in-process import) and blow past Python's import-scan recursion limit. It's
+listed under `includes` instead, so py2app follows only what the app actually imports.
+
+If you build from a **conda-based Python** (`sys.base_prefix` pointing at a conda env), py2app's
+dependency scanner misses a handful of `@rpath`-linked dylibs (`libffi`, `libssl`, `libcrypto`,
+`libbz2`, `liblzma`, `libmpdec`, `libz`) that the stdlib's C extensions need — the built app then
+fails to launch with `Library not loaded: @rpath/lib*.dylib`. `setup.py`'s `_find_conda_dylibs()`
+locates and bundles them explicitly via `OPTIONS["frameworks"]`; if it raises, your conda env is
+missing one of those libs under `<sys.base_prefix>/lib`.
 
 ## Notes / things left intentionally simple for now
 
