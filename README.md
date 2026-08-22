@@ -21,7 +21,7 @@ odl-desktop/
 │   ├── style.css
 │   └── app.js
 ├── assets/
-│   ├── icon_1024.png        # source art for the app icon (original design — see licensing note below)
+│   ├── icon_1024.png        # source art for the app icon (original otter design — see licensing note below)
 │   └── AppIcon.icns         # compiled icon, referenced by setup.py's OPTIONS["iconfile"]
 ├── requirements.txt
 ├── setup.py                # py2app config for building a double-clickable .app later
@@ -75,9 +75,11 @@ fails to launch with `Library not loaded: @rpath/lib*.dylib`. `setup.py`'s `_fin
 locates and bundles them explicitly via `OPTIONS["frameworks"]`; if it raises, your conda env is
 missing one of those libs under `<sys.base_prefix>/lib`.
 
-`assets/icon_1024.png` is original artwork (a document glyph + export arrow on a rounded off-white
-square, with an "ODL Desktop" wordmark), compiled to `assets/AppIcon.icns` via `iconutil`. It does
-**not** reuse OpenDataLoader's own logo — see [Licensing](#licensing) for why.
+`assets/icon_1024.png` is original artwork — a cartoon otter holding a fish labeled "PDF" (with a
+cartoon poop planting an "MD" flag off to the side, nodding at the app's PDF-in/Markdown-out job)
+on a rounded off-white square, with an "ODL Desktop" wordmark — compiled to `assets/AppIcon.icns`
+via `iconutil`. It does **not** reuse OpenDataLoader's own logo or name — see
+[Licensing](#licensing) for why.
 
 ## Licensing
 
