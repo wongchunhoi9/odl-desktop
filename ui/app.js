@@ -7,6 +7,7 @@
 let inputPaths = [];     // absolute paths chosen by the user (files or folders)
 let hybridPollTimer = null;
 let converting = false;
+let javaOk = false;      // gates Convert — no point starting a batch that can only fail on the JVM step
 
 /* ------------------------------------------------------------------ */
 /* Boot                                                                 */
@@ -15,10 +16,7 @@ let converting = false;
 window.addEventListener("pywebviewready", init);
 
 async function init() {
-  const env = await api("check_environment");
-  if (!env.java_ok) {
-    showEnvBanner(env.java_message || "Java 11+ is required but was not detected.");
-  }
+  await checkEnvironment();
 
   const settings = await api("get_settings");
   applySettingsToForm(settings);
@@ -38,10 +36,29 @@ function api(method, ...args) {
   return window.pywebview.api[method](...args);
 }
 
+/* Re-runs the Java check (used at boot and from the banner's "Re-check"
+ * button, since a user who just installed Java can't otherwise get the
+ * app to notice without quitting and relaunching it). */
+async function checkEnvironment() {
+  const env = await api("check_environment");
+  javaOk = !!env.java_ok;
+  if (javaOk) {
+    hideEnvBanner();
+  } else {
+    showEnvBanner(env.java_message || "Java 11+ is required but was not detected.");
+  }
+  updateConvertEnabled();
+  return env;
+}
+
 function showEnvBanner(text) {
   const banner = document.getElementById("env-banner");
   document.getElementById("env-banner-text").textContent = "⚠ " + text;
   banner.classList.remove("hidden");
+}
+
+function hideEnvBanner() {
+  document.getElementById("env-banner").classList.add("hidden");
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,6 +200,19 @@ function wireStaticControls() {
   document.getElementById("link-docs").addEventListener("click", (e) => {
     e.preventDefault();
     api("open_docs");
+  });
+
+  document.getElementById("btn-download-java").addEventListener("click", () => {
+    api("open_java_download");
+  });
+  document.getElementById("btn-recheck-java").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = "Checking…";
+    const env = await checkEnvironment();
+    btn.disabled = false;
+    btn.textContent = "Re-check";
+    if (env.java_ok) appendLog("Java detected — Convert is now available.");
   });
 
   document.getElementById("btn-hybrid-toggle").addEventListener("click", onHybridToggleClick);
@@ -345,8 +375,9 @@ function updateConvertEnabled() {
     document.getElementById("chk-hybrid-enabled").checked &&
     document.getElementById("section-hybrid").dataset.state !== "running";
 
-  btn.disabled = converting || !hasInputs || !hasOutput;
+  btn.disabled = converting || !javaOk || !hasInputs || !hasOutput;
   btn.textContent = hybridWantedButNotRunning ? "Start Backend & Convert" : "Convert";
+  btn.title = !javaOk ? "Java 11+ is required — see the banner above." : "";
 }
 
 async function onConvertClick() {

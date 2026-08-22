@@ -21,6 +21,7 @@ from backend.hybrid_server import manager as hybrid_manager
 from backend.java_check import check_java
 
 DOCS_URL = "https://opendataloader.org/docs"
+JAVA_DOWNLOAD_URL = "https://adoptium.net/temurin/releases/?os=mac"
 
 
 class Api:
@@ -97,6 +98,11 @@ class Api:
     def open_docs(self) -> dict:
         """Opens the OpenDataLoader documentation in the user's default browser."""
         subprocess.run(["open", DOCS_URL])
+        return {"ok": True}
+
+    def open_java_download(self) -> dict:
+        """Opens the Adoptium Temurin macOS download page in the user's default browser."""
+        subprocess.run(["open", JAVA_DOWNLOAD_URL])
         return {"ok": True}
 
     # ---- hybrid backend --------------------------------------------------

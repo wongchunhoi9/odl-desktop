@@ -5,6 +5,21 @@ Python + [pywebview](https://pywebview.flowrl.com/). Lets you pick files/folders
 formats, toggle header/footer stripping, and manage the optional hybrid OCR backend — all from a
 native window, without touching the command line.
 
+## For beta testers (you got sent the `.app`, not this repo)
+
+1. Move `ODL Desktop.app` into `/Applications` (or anywhere), then **right-click → Open** the
+   first time — it isn't notarized, so a plain double-click gets blocked by Gatekeeper. After that
+   first right-click → Open, it launches normally.
+2. Install **Java 11+** if you don't already have it — it's the one thing the app doesn't bundle
+   (the OpenDataLoader engine itself, and everything else, ships inside the `.app`). If it's
+   missing, the app shows a banner on launch with a **Download Java…** button (opens the Temurin
+   download page) and a **Re-check** button — install the `.pkg`, click Re-check, no relaunch
+   needed. `Convert` stays disabled until Java is detected.
+3. That's it for the core PDF → Markdown/JSON/HTML conversion. The optional **Hybrid/OCR backend**
+   is a separate install (`pip install "opendataloader-pdf[hybrid]"` into some Python on your
+   PATH) — skip it unless you need OCR on scanned PDFs; the panel explains this if you try to
+   start it without that installed.
+
 ## Project layout
 
 ```
@@ -61,6 +76,16 @@ python setup.py py2app
 
 The built app lands in `dist/ODL Desktop.app`. Since it isn't notarized, the first launch needs a
 right-click → Open to get past Gatekeeper.
+
+`opendataloader_pdf` ships its own ~24MB Java CLI jar as in-package data (`opendataloader_pdf/jar/`),
+loaded at runtime via `importlib.resources`. That's not something `setup.py`'s `includes` list has
+to do anything special for — py2app's build picks up the whole package (jar included) into
+`Resources/lib/python313.zip`, and `importlib.resources.as_file()` transparently extracts it from
+the zip to a temp file when `opendataloader_pdf.convert()` runs. Confirmed by running a real
+conversion through the packaged app's embedded interpreter (`Contents/MacOS/python`, with
+`PYTHONHOME`/`PYTHONPATH` pointed at `Contents/Resources` so it resolves the bundle instead of
+falling back to the system Python) — so **Java is the only dependency the packaged `.app` doesn't
+carry itself**, which is what `backend/java_check.py` and the UI's env-banner check for.
 
 `setup.py` deliberately does **not** put `opendataloader_pdf` in py2app's `packages` list — that
 option bundles a package's entire submodule tree recursively, which would drag in
