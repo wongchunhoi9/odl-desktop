@@ -21,12 +21,17 @@ from typing import Callable, Optional
 
 import opendataloader_pdf
 
-FORMAT_EXTENSIONS = {
-    "markdown": ".md",
-    "json": ".json",
-    "html": ".html",
-    "pdf": ".pdf",              # annotated/tagged pdf output
-    "markdown-with-images": ".md",
+# Filename the CLI actually writes for each format, given an input stem.
+# NOTE: pdf/tagged-pdf do NOT write "<stem>.pdf" — verified against the real
+# CLI output, which suffixes them ("<stem>_annotated.pdf" / "<stem>_tagged.pdf")
+# to avoid colliding with the source file's own name.
+FORMAT_FILENAME_TEMPLATES = {
+    "markdown": "{stem}.md",
+    "json": "{stem}.json",
+    "html": "{stem}.html",
+    "pdf": "{stem}_annotated.pdf",        # visual-debugging output (bounding boxes)
+    "tagged-pdf": "{stem}_tagged.pdf",    # accessibility-tagged PDF
+    "markdown-with-images": "{stem}.md",
 }
 
 
@@ -56,6 +61,21 @@ def _gather_input_files(input_paths: list, include_subfolders: bool) -> list:
         elif p.suffix.lower() == ".pdf":
             files.append(p)
     return files
+
+
+def _find_duplicate_stems(input_files: list) -> dict:
+    """Maps filename stem -> paths, for stems shared by more than one input.
+
+    The CLI writes every input's output into one flat output_dir named only
+    by its stem (e.g. "report.md") — inputs with the same stem from different
+    folders (common with "Include subfolders") silently overwrite each
+    other's output on disk. Caught here so run_conversion can refuse the
+    batch instead of losing one input's output silently.
+    """
+    by_stem: dict = {}
+    for f in input_files:
+        by_stem.setdefault(f.stem, []).append(f)
+    return {stem: paths for stem, paths in by_stem.items() if len(paths) > 1}
 
 
 def build_convert_kwargs(settings: dict, input_files: list, output_dir: str) -> dict:
@@ -98,8 +118,8 @@ def _collect_results(input_files: list, output_dir: str, formats: list) -> list:
         stem = f.stem
         outputs = []
         for fmt in formats:
-            ext = FORMAT_EXTENSIONS.get(fmt, "")
-            candidate = out_dir / f"{stem}{ext}"
+            template = FORMAT_FILENAME_TEMPLATES.get(fmt, "{stem}")
+            candidate = out_dir / template.format(stem=stem)
             if candidate.exists():
                 outputs.append(str(candidate))
         results.append(
@@ -128,6 +148,22 @@ def run_conversion(
     input_files = _gather_input_files(input_paths, settings.get("include_subfolders", False))
     if not input_files:
         return ConversionResult(ok=False, files=[], error="No PDF files found in the selection.")
+
+    duplicates = _find_duplicate_stems(input_files)
+    if duplicates:
+        lines = [
+            f"• {stem}.pdf ({len(paths)}x): " + ", ".join(str(p) for p in paths)
+            for stem, paths in duplicates.items()
+        ]
+        return ConversionResult(
+            ok=False,
+            files=[],
+            error=(
+                "These input files share the same name and would overwrite each "
+                "other's output:\n" + "\n".join(lines) +
+                "\nRename the files, or convert the affected folders separately."
+            ),
+        )
 
     report(f"Preparing to convert {len(input_files)} file(s)...")
     kwargs = build_convert_kwargs(settings, input_files, output_dir)
