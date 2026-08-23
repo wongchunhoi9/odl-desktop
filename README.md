@@ -108,8 +108,7 @@ reuse OpenDataLoader's own logo or name — see
 
 ## Licensing
 
-ODL Desktop's own code has no license file yet (add one before distributing it publicly — MIT or
-Apache-2.0 are the usual choices for a thin wrapper like this).
+ODL Desktop's own code is [MIT licensed](LICENSE).
 
 It depends on and bundles [`opendataloader-pdf`](https://pypi.org/project/opendataloader-pdf/)
 (Apache License 2.0, © Hancom, Inc.). Apache-2.0 permits using, depending on, and redistributing
