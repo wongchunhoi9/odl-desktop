@@ -130,7 +130,11 @@ class HybridServerManager:
         cmd = [HYBRID_SERVER_EXECUTABLE, "--port", str(self.port)]
         if force_ocr:
             cmd.append("--force-ocr")
-            cmd += ["--ocr-lang", ocr_lang or "en"]
+        # --ocr-lang applies whenever OCR runs at all, not only under
+        # --force-ocr — the hybrid backend also OCRs scanned pages that lack
+        # embedded text on its own. Passing it unconditionally is what makes
+        # the language picker meaningful outside the force-OCR case.
+        cmd += ["--ocr-lang", ocr_lang or "en"]
         if enrich_formula:
             cmd.append("--enrich-formula")
         if enrich_picture_description:

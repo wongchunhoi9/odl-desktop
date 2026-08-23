@@ -9,6 +9,124 @@ let hybridPollTimer = null;
 let converting = false;
 let javaOk = false;      // gates Convert — no point starting a batch that can only fail on the JVM step
 
+/* Hybrid/OCR backend startup flags are only ever passed to the
+ * `opendataloader-pdf-hybrid` subprocess with the default `--ocr-engine`
+ * (easyocr) — see backend/hybrid_server.py. EasyOCR uses ISO 639-1-ish
+ * codes distinct from Tesseract/RapidOCR/ocrmac; this list is
+ * `easyocr.config.all_lang_list` (86 codes) with human-readable names,
+ * sorted alphabetically with English pinned first. Regenerate from that
+ * module if the bundled easyocr version's language coverage changes. */
+const EASYOCR_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "abq", name: "Abaza" },
+  { code: "ady", name: "Adyghe" },
+  { code: "af", name: "Afrikaans" },
+  { code: "sq", name: "Albanian" },
+  { code: "ang", name: "Angika" },
+  { code: "ar", name: "Arabic" },
+  { code: "as", name: "Assamese" },
+  { code: "ava", name: "Avar" },
+  { code: "az", name: "Azerbaijani" },
+  { code: "be", name: "Belarusian" },
+  { code: "bn", name: "Bengali" },
+  { code: "bho", name: "Bhojpuri" },
+  { code: "bh", name: "Bihari" },
+  { code: "bs", name: "Bosnian" },
+  { code: "bg", name: "Bulgarian" },
+  { code: "che", name: "Chechen" },
+  { code: "ch_sim", name: "Chinese (Simplified)" },
+  { code: "ch_tra", name: "Chinese (Traditional)" },
+  { code: "hr", name: "Croatian" },
+  { code: "cs", name: "Czech" },
+  { code: "da", name: "Danish" },
+  { code: "dar", name: "Dargwa" },
+  { code: "nl", name: "Dutch" },
+  { code: "et", name: "Estonian" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "gom", name: "Goan Konkani" },
+  { code: "bgc", name: "Haryanvi" },
+  { code: "hi", name: "Hindi" },
+  { code: "hu", name: "Hungarian" },
+  { code: "is", name: "Icelandic" },
+  { code: "id", name: "Indonesian" },
+  { code: "inh", name: "Ingush" },
+  { code: "ga", name: "Irish" },
+  { code: "it", name: "Italian" },
+  { code: "ja", name: "Japanese" },
+  { code: "kbd", name: "Kabardian" },
+  { code: "kn", name: "Kannada" },
+  { code: "ko", name: "Korean" },
+  { code: "ku", name: "Kurdish" },
+  { code: "lbe", name: "Lak" },
+  { code: "la", name: "Latin" },
+  { code: "lv", name: "Latvian" },
+  { code: "lez", name: "Lezghian" },
+  { code: "lt", name: "Lithuanian" },
+  { code: "mah", name: "Magahi" },
+  { code: "mai", name: "Maithili" },
+  { code: "ms", name: "Malay" },
+  { code: "mt", name: "Maltese" },
+  { code: "mni", name: "Manipuri" },
+  { code: "mi", name: "Maori" },
+  { code: "mr", name: "Marathi" },
+  { code: "mn", name: "Mongolian" },
+  { code: "sck", name: "Nagpuri" },
+  { code: "ne", name: "Nepali" },
+  { code: "new", name: "Newari" },
+  { code: "no", name: "Norwegian" },
+  { code: "oc", name: "Occitan" },
+  { code: "pi", name: "Pali" },
+  { code: "fa", name: "Persian" },
+  { code: "pl", name: "Polish" },
+  { code: "pt", name: "Portuguese" },
+  { code: "ro", name: "Romanian" },
+  { code: "ru", name: "Russian" },
+  { code: "sa", name: "Sanskrit" },
+  { code: "rs_cyrillic", name: "Serbian (Cyrillic)" },
+  { code: "rs_latin", name: "Serbian (Latin)" },
+  { code: "sk", name: "Slovak" },
+  { code: "sl", name: "Slovenian" },
+  { code: "es", name: "Spanish" },
+  { code: "sw", name: "Swahili" },
+  { code: "sv", name: "Swedish" },
+  { code: "tab", name: "Tabassaran" },
+  { code: "tl", name: "Tagalog" },
+  { code: "tjk", name: "Tajik" },
+  { code: "ta", name: "Tamil" },
+  { code: "te", name: "Telugu" },
+  { code: "th", name: "Thai" },
+  { code: "tr", name: "Turkish" },
+  { code: "uk", name: "Ukrainian" },
+  { code: "ur", name: "Urdu" },
+  { code: "ug", name: "Uyghur" },
+  { code: "uz", name: "Uzbek" },
+  { code: "vi", name: "Vietnamese" },
+  { code: "cy", name: "Welsh" },
+];
+
+function populateOcrLanguageOptions() {
+  const select = document.getElementById("input-ocr-lang");
+  select.innerHTML = "";
+  for (const { code, name } of EASYOCR_LANGUAGES) {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = `${name} (${code})`;
+    select.appendChild(opt);
+  }
+}
+
+function getSelectedOcrLangs() {
+  return Array.from(document.getElementById("input-ocr-lang").selectedOptions).map((o) => o.value);
+}
+
+function setSelectedOcrLangs(codes) {
+  const wanted = new Set((codes || "en").split(",").map((c) => c.trim()).filter(Boolean));
+  for (const opt of document.getElementById("input-ocr-lang").options) {
+    opt.selected = wanted.has(opt.value);
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Boot                                                                 */
 /* ------------------------------------------------------------------ */
@@ -16,6 +134,7 @@ let javaOk = false;      // gates Convert — no point starting a batch that can
 window.addEventListener("pywebviewready", init);
 
 async function init() {
+  populateOcrLanguageOptions();
   await checkEnvironment();
 
   const settings = await api("get_settings");
@@ -83,7 +202,7 @@ function applySettingsToForm(s) {
 
   document.getElementById("sel-hybrid-mode").value = s.hybrid_mode || "auto";
   document.getElementById("chk-force-ocr").checked = !!s.force_ocr;
-  document.getElementById("input-ocr-lang").value = s.ocr_lang || "en";
+  setSelectedOcrLangs(s.ocr_lang);
   document.getElementById("chk-enrich-formula").checked = !!s.enrich_formula;
   document.getElementById("chk-enrich-picture").checked = !!s.enrich_picture_description;
   document.getElementById("input-hybrid-port").value = s.hybrid_port || 5002;
@@ -113,7 +232,7 @@ function gatherSettings() {
     // Backend startup flags — only take effect the next time the backend
     // is (re)started; see gatherHybridStartupOptions().
     force_ocr: document.getElementById("chk-force-ocr").checked,
-    ocr_lang: document.getElementById("input-ocr-lang").value,
+    ocr_lang: getSelectedOcrLangs().join(","),
     enrich_formula: document.getElementById("chk-enrich-formula").checked,
     enrich_picture_description: document.getElementById("chk-enrich-picture").checked,
   };
@@ -125,7 +244,7 @@ function gatherHybridStartupOptions() {
   return {
     port: parseInt(document.getElementById("input-hybrid-port").value, 10) || 5002,
     force_ocr: document.getElementById("chk-force-ocr").checked,
-    ocr_lang: document.getElementById("input-ocr-lang").value || "en",
+    ocr_lang: getSelectedOcrLangs().join(",") || "en",
     enrich_formula: document.getElementById("chk-enrich-formula").checked,
     enrich_picture_description: document.getElementById("chk-enrich-picture").checked,
   };

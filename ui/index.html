@@ -142,7 +142,11 @@
 
         <div class="field-row" id="row-ocr-lang">
           <label class="field-label" for="input-ocr-lang">OCR languages</label>
-          <input type="text" id="input-ocr-lang" placeholder="en, ko, ja" />
+          <select id="input-ocr-lang" multiple size="6"></select>
+          <p class="hint hint-tight">
+            ⌘/Ctrl-click to select multiple. Applies to scanned pages always, and to every
+            page when Force OCR is on.
+          </p>
         </div>
 
         <div class="enrichment-group" id="enrichment-group">

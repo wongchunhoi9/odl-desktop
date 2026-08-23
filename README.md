@@ -132,3 +132,10 @@ that package — including inside this app's `.app` bundle — but **§6 (Tradem
 - `backend/hybrid_server.py` launches the hybrid backend via the `opendataloader-pdf-hybrid`
   console script installed by the `opendataloader-pdf[hybrid]` extra. If a future version of the
   package renames or changes that entry point, update `HYBRID_SERVER_EXECUTABLE` there.
+- The "OCR languages" picker (`ui/app.js`'s `EASYOCR_LANGUAGES`) is a hand-copied snapshot of
+  `easyocr.config.all_lang_list` with human-readable names — it assumes the hybrid backend's
+  default `--ocr-engine` (easyocr). Tesseract/RapidOCR/ocrmac use different code systems entirely
+  (see `--ocr-engine`/`--ocr-lang` help in the installed `opendataloader-pdf[hybrid]` package); this
+  app doesn't expose an engine picker, so switching engines would need this list swapped out too.
+  Regenerate the list from `easyocr.config.all_lang_list` if the bundled easyocr version's language
+  coverage changes.
