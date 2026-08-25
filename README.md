@@ -1,110 +1,143 @@
+<img src="assets/icon_1024.png" width="96" alt="ODL Desktop icon" />
+
 # ODL Desktop
 
-A minimal macOS desktop UI for [OpenDataLoader PDF](https://opendataloader.org), built with
-Python + [pywebview](https://pywebview.flowrl.com/). Lets you pick files/folders, choose output
-formats, toggle header/footer stripping, and manage the optional hybrid OCR backend — all from a
-native window, without touching the command line.
+A native macOS desktop app for [OpenDataLoader PDF](https://opendataloader.org) — pick files or a
+folder, choose output formats, and convert, all from a window instead of a terminal. Built with
+Python + [pywebview](https://pywebview.flowrl.com/), packaged as a double-clickable `.app` with
+[py2app](https://py2app.readthedocs.io/).
 
-## For beta testers (you got sent the `.app`, not this repo)
+## Features
 
-1. Move `ODL Desktop.app` into `/Applications` (or anywhere), then **right-click → Open** the
-   first time — it isn't notarized, so a plain double-click gets blocked by Gatekeeper. After that
-   first right-click → Open, it launches normally.
-2. Install **Java 11+** if you don't already have it — it's the one thing the app doesn't bundle
-   (the OpenDataLoader engine itself, and everything else, ships inside the `.app`). If it's
-   missing, the app shows a banner on launch with a **Download Java…** button (opens the Temurin
-   download page) and a **Re-check** button — install the `.pkg`, click Re-check, no relaunch
-   needed. `Convert` stays disabled until Java is detected.
-3. That's it for the core PDF → Markdown/JSON/HTML conversion. The optional **Hybrid/OCR backend**
-   is a separate install (`pip install "opendataloader-pdf[hybrid]"` into some Python on your
-   PATH) — skip it unless you need OCR on scanned PDFs; the panel explains this if you try to
-   start it without that installed.
+- **Convert** PDFs to Markdown, JSON, HTML, or a tagged/accessibility PDF — batch a whole folder
+  (optionally recursive), pick a page range, strip headers/footers, control table detection and
+  reading order, extract or embed images, sanitize emails/phones/IPs/URLs out of the text.
+- **Optional hybrid OCR backend** for scanned or image-heavy PDFs, with a language picker covering
+  the 86 languages EasyOCR supports and adjustable formula/picture-description enrichment.
+- **Settings persist** across launches (`~/Library/Application Support/ODL Desktop/prefs.json`).
+- **In-app Java check** — the one thing the packaged app doesn't bundle. If Java's missing, a
+  banner offers a direct download link and a one-click re-check, no relaunch needed.
+
+## Download
+
+Grab the latest build from the
+[Releases page](https://github.com/wongchunhoi9/odl-desktop/releases) — unzip, then **right-click →
+Open** the first time (it isn't notarized, so a plain double-click gets blocked by Gatekeeper).
+That's it for the core conversion features; see [Hybrid/OCR setup](#hybridocr-setup) below if you
+need OCR on scanned PDFs.
+
+Current builds are **Apple Silicon (arm64) only** — see [Building the .app](#building-the-app) if
+you need an Intel build.
+
+### Requirements
+
+- **macOS**, Apple Silicon.
+- **Java 11+** — not bundled; the app detects this on launch and offers to help you install it.
+  Everything else (the OpenDataLoader engine itself, included) ships inside the `.app`.
+
+### Hybrid/OCR setup
+
+The hybrid backend is a separate, optional install: `pip install "opendataloader-pdf[hybrid]"`
+into any Python on your `PATH`, then start/stop it from the app's "Hybrid/OCR Backend" panel. Skip
+this unless you're converting scanned PDFs — the panel explains what's missing if you try to start
+it without that installed.
 
 ## Project layout
 
 ```
 odl-desktop/
-├── app.py                 # entry point — creates the pywebview window, wires the JS<->Python bridge
+├── app.py                    # entry point — creates the pywebview window, wires the JS↔Python bridge
 ├── backend/
-│   ├── api.py              # the Api class exposed to the frontend (window.pywebview.api.*)
-│   ├── converter.py        # wraps opendataloader_pdf.convert(), builds kwargs from UI options
-│   ├── hybrid_server.py     # start/stop/health-check for the local docling-fast hybrid backend
-│   ├── java_check.py        # verifies Java 11+ is on PATH before we let anyone hit Convert
-│   └── prefs.py             # persists last-used settings to ~/Library/Application Support
+│   ├── api.py                 # the Api class exposed to the frontend (window.pywebview.api.*)
+│   ├── converter.py           # wraps opendataloader_pdf.convert(); UI settings → CLI kwargs → results
+│   ├── hybrid_server.py       # start/stop/health-check for the local hybrid/OCR backend process
+│   ├── java_check.py          # verifies Java 11+ is on PATH before Convert is enabled
+│   └── prefs.py               # persists last-used settings to ~/Library/Application Support
 ├── ui/
-│   ├── index.html           # includes a link to the OpenDataLoader docs in the titlebar
+│   ├── index.html             # layout; titlebar links to the OpenDataLoader docs
 │   ├── style.css
-│   └── app.js
+│   └── app.js                 # all frontend logic — no framework, no build step
 ├── assets/
-│   ├── icon_1024.png        # source art for the app icon (original line-art otter — see licensing note below)
-│   └── AppIcon.icns         # compiled icon, referenced by setup.py's OPTIONS["iconfile"]
+│   ├── icon_1024.png          # source art for the app icon (original artwork, not OpenDataLoader's)
+│   └── AppIcon.icns           # compiled icon, referenced by setup.py's OPTIONS["iconfile"]
 ├── requirements.txt
-├── setup.py                # py2app config for building a double-clickable .app later
-├── THIRD_PARTY_NOTICES.md  # Apache-2.0 attribution for the bundled opendataloader-pdf dependency
-├── THIRD_PARTY_LICENSE.txt # full Apache 2.0 text, copied from opendataloader-pdf's own LICENSE
+├── setup.py                  # py2app config for building the .app
+├── LICENSE                   # MIT, this project's own code
+├── THIRD_PARTY_NOTICES.md    # Apache-2.0 attribution for the bundled opendataloader-pdf dependency
+├── THIRD_PARTY_LICENSE.txt   # full Apache 2.0 text, copied from opendataloader-pdf's own LICENSE
+├── ROADMAP.md                # planned features, not yet implemented
 └── README.md
 ```
 
-## Setup
+## Development setup
 
 ```bash
+git clone https://github.com/wongchunhoi9/odl-desktop.git
 cd odl-desktop
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-You also need:
-
-- **Java 11+** on your PATH (the OpenDataLoader core engine is Java-based). The app checks this
-  on launch and shows a setup banner if it's missing.
-- **Hybrid/OCR extra**, if you want OCR: `pip install "opendataloader-pdf[hybrid]"`. The app
-  starts/stops the local `docling-fast` backend process for you from the "Hybrid/OCR Backend" panel.
-
-## Run (development)
-
-```bash
 python app.py
 ```
 
-## Package as a .app
+`requirements.txt` installs `pywebview` and `opendataloader-pdf[hybrid]` — the hybrid extra pulls
+in `docling`/`torch`/OCR engines, so the first install takes a while and a few hundred MB. If you
+only want the core conversion (no OCR), `pip install pywebview opendataloader-pdf` is enough; the
+hybrid panel will just tell you the extra isn't installed if you try to use it.
+
+## Building the .app
 
 ```bash
 pip install py2app
 python setup.py py2app
 ```
 
-The built app lands in `dist/ODL Desktop.app`. Since it isn't notarized, the first launch needs a
-right-click → Open to get past Gatekeeper.
+Output lands in `dist/ODL Desktop.app`, matching whatever architecture you build on (arm64 on
+Apple Silicon, x86_64 on Intel — py2app doesn't cross-compile or produce universal binaries by
+default). Since it isn't notarized, first launch needs a right-click → Open to get past Gatekeeper.
 
-`opendataloader_pdf` ships its own ~24MB Java CLI jar as in-package data (`opendataloader_pdf/jar/`),
-loaded at runtime via `importlib.resources`. That's not something `setup.py`'s `includes` list has
-to do anything special for — py2app's build picks up the whole package (jar included) into
-`Resources/lib/python313.zip`, and `importlib.resources.as_file()` transparently extracts it from
-the zip to a temp file when `opendataloader_pdf.convert()` runs. Confirmed by running a real
-conversion through the packaged app's embedded interpreter (`Contents/MacOS/python`, with
-`PYTHONHOME`/`PYTHONPATH` pointed at `Contents/Resources` so it resolves the bundle instead of
-falling back to the system Python) — so **Java is the only dependency the packaged `.app` doesn't
-carry itself**, which is what `backend/java_check.py` and the UI's env-banner check for.
+A couple of things `setup.py` does that are easy to break by "cleaning up":
 
-`setup.py` deliberately does **not** put `opendataloader_pdf` in py2app's `packages` list — that
-option bundles a package's entire submodule tree recursively, which would drag in
-`hybrid_server.py`'s `docling`/`torch` imports (unused here; the hybrid backend runs as a separate
-subprocess, not an in-process import) and blow past Python's import-scan recursion limit. It's
-listed under `includes` instead, so py2app follows only what the app actually imports.
+- **`opendataloader_pdf` is under `includes`, not `packages`.** `packages` forces py2app to
+  recursively bundle a package's entire submodule tree — including `hybrid_server.py`'s
+  `docling`/`torch` imports, which this app never touches in-process (the hybrid backend runs as a
+  separate OS subprocess via its own console script). That blows past Python's import-scan
+  recursion limit and would bundle several GB of unused ML dependencies. `includes` makes py2app
+  follow only what's actually imported (`wrapper.py`, `convert_generated.py`, etc.) — which, via
+  `importlib.resources`, still picks up the package's ~24MB bundled Java CLI jar as data, extracted
+  transparently from the zip at runtime. Verified by running a real conversion through the packaged
+  app's embedded interpreter directly (`Contents/MacOS/python`, with `PYTHONHOME`/`PYTHONPATH`
+  pointed at `Contents/Resources` so it resolves the bundle instead of falling back to the system
+  Python).
+- **`_find_conda_dylibs()` only matters if you build from a conda-based Python.** py2app's
+  dependency scanner misses several `@rpath`-linked dylibs (`libffi`, `libssl`, `libcrypto`, etc.)
+  that conda Python's stdlib C extensions need — without them the built app fails to launch with
+  `Library not loaded: @rpath/lib*.dylib`. This function locates and bundles them explicitly. If it
+  raises, your conda env is missing one of those libs under `<sys.base_prefix>/lib`; on a
+  non-conda Python this code path isn't exercised.
 
-If you build from a **conda-based Python** (`sys.base_prefix` pointing at a conda env), py2app's
-dependency scanner misses a handful of `@rpath`-linked dylibs (`libffi`, `libssl`, `libcrypto`,
-`libbz2`, `liblzma`, `libmpdec`, `libz`) that the stdlib's C extensions need — the built app then
-fails to launch with `Library not loaded: @rpath/lib*.dylib`. `setup.py`'s `_find_conda_dylibs()`
-locates and bundles them explicitly via `OPTIONS["frameworks"]`; if it raises, your conda env is
-missing one of those libs under `<sys.base_prefix>/lib`.
+## Creating a GitHub Release
 
-`assets/icon_1024.png` is original artwork — a black-and-white line-art otter leaping past a "PDF"
-document tag, with "TEXT"/"TEXTS" trailing off it to suggest extraction, on a rounded white square
-with an "ODL desktop" wordmark — compiled to `assets/AppIcon.icns` via `iconutil`. It does **not**
-reuse OpenDataLoader's own logo or name — see
-[Licensing](#licensing) for why.
+To publish a build for others to download from the repo's Releases page:
+
+```bash
+# 1. Build the .app (see above), then zip it — GitHub Releases wants a file, not a raw .app bundle
+cd dist && zip -r "ODL-Desktop-macOS-arm64.zip" "ODL Desktop.app" && cd ..
+
+# 2. Tag the commit you're releasing
+git tag v0.1.0
+git push origin v0.1.0
+
+# 3. Create the release and attach the zip
+gh release create v0.1.0 "dist/ODL-Desktop-macOS-arm64.zip" \
+  --title "v0.1.0" \
+  --notes "First public build. Apple Silicon only — see README for Intel."
+```
+
+`gh release create` also works without a pre-existing tag (pass `--target main` and it creates the
+tag for you). Bump the version in two places when cutting a real release: `setup.py`'s
+`CFBundleShortVersionString` and the git tag should match. Since current builds are arm64-only,
+say so in the release notes/asset name (as above) rather than implying it's universal.
 
 ## Licensing
 
@@ -117,10 +150,16 @@ that package — including inside this app's `.app` bundle — but **§6 (Tradem
 
 - Calling `opendataloader_pdf.convert()` from [converter.py](backend/converter.py) and shipping the
   package inside the packaged app: fine, covered by the license.
-- Reusing OpenDataLoader's actual logo as this app's icon or branding: **not** covered — doing so
-  earlier was a mistake, since fixed by swapping in the original artwork described above.
-- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [THIRD_PARTY_LICENSE.txt](THIRD_PARTY_LICENSE.txt)
-  carry the required §4 attribution forward — `setup.py` bundles both into the packaged `.app`.
+- Reusing OpenDataLoader's own logo or name as this app's branding: **not** covered — this app's
+  icon is original artwork for that reason.
+- [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and
+  [THIRD_PARTY_LICENSE.txt](THIRD_PARTY_LICENSE.txt) carry the required §4 attribution forward —
+  `setup.py` bundles both into the packaged `.app`.
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for planned features (file-list thumbnails, single-page preview) —
+not implemented yet.
 
 ## Notes / things left intentionally simple for now
 
@@ -131,10 +170,14 @@ that package — including inside this app's `.app` bundle — but **§6 (Tradem
 - `backend/hybrid_server.py` launches the hybrid backend via the `opendataloader-pdf-hybrid`
   console script installed by the `opendataloader-pdf[hybrid]` extra. If a future version of the
   package renames or changes that entry point, update `HYBRID_SERVER_EXECUTABLE` there.
-- The "OCR languages" picker (`ui/app.js`'s `EASYOCR_LANGUAGES`) is a hand-copied snapshot of
+- The OCR language picker (`ui/app.js`'s `EASYOCR_LANGUAGES`) is a hand-copied snapshot of
   `easyocr.config.all_lang_list` with human-readable names — it assumes the hybrid backend's
   default `--ocr-engine` (easyocr). Tesseract/RapidOCR/ocrmac use different code systems entirely
   (see `--ocr-engine`/`--ocr-lang` help in the installed `opendataloader-pdf[hybrid]` package); this
   app doesn't expose an engine picker, so switching engines would need this list swapped out too.
   Regenerate the list from `easyocr.config.all_lang_list` if the bundled easyocr version's language
   coverage changes.
+- Same-named PDFs converted together (e.g. two `report.pdf` files from different subfolders with
+  "Include subfolders" on) would silently overwrite each other's output, since the underlying CLI
+  writes every input into one flat output folder named only by its stem. `run_conversion` detects
+  this before converting and refuses the batch with a clear message rather than losing data.
