@@ -5,3 +5,6 @@ build/
 dist/
 *.egg-info/
 .DS_Store
+
+# Local-only session transcripts (may contain private paths/context) — never commit
+local-transcripts/
