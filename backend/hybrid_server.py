@@ -18,14 +18,17 @@ what the running server will do), not per-request flags — which is why we
 pass them here at start() time rather than in converter.py's convert() call.
 """
 
+import os
 import shutil
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
 import urllib.request
 from collections import deque
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 DEFAULT_PORT = 5002
@@ -33,6 +36,62 @@ STARTUP_TIMEOUT_SECONDS = 60  # first run downloads docling models; can be slow
 POLL_INTERVAL_SECONDS = 0.5
 
 HYBRID_SERVER_EXECUTABLE = "opendataloader-pdf-hybrid"
+
+# Env vars the py2app launcher / our own interpreter set for *this* process.
+# A child that's a venv's console script must not inherit them, or its Python
+# would try to load its stdlib from inside the .app bundle.
+_PYTHON_ENV_VARS = (
+    "PYTHONHOME", "PYTHONPATH", "PYTHONEXECUTABLE", "PYTHONNOUSERSITE",
+    "RESOURCEPATH", "ARGVZERO", "EXECUTABLEPATH", "__PYVENV_LAUNCHER__",
+    "DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH",
+)
+
+_CONDA_ROOTS = (
+    "miniconda3", "miniconda", "anaconda3", "anaconda",
+    "miniforge3", "mambaforge", "opt/anaconda3",
+)
+
+
+def _candidate_bin_dirs(home: Optional[Path] = None) -> list:
+    """Directories where the hybrid extra's console script is commonly installed.
+
+    A Finder-launched .app only sees launchd's minimal PATH (/usr/bin:/bin:...),
+    not the user's shell PATH, so a plain `shutil.which` misses installs in
+    conda, pipx, pyenv, venvs, etc. Order is lookup priority.
+    """
+    home = home or Path.home()
+    dirs = [
+        Path(sys.executable).parent,       # running from source in a venv that isn't activated
+        home / "odl-hybrid" / "bin",       # location suggested in the README
+        home / ".local" / "bin",           # pipx, pip --user (Linux-style)
+        Path("/opt/homebrew/bin"),
+        Path("/usr/local/bin"),
+    ]
+    dirs += sorted(home.glob("Library/Python/*/bin"), reverse=True)   # pip --user on macOS
+    dirs += sorted(Path("/Library/Frameworks/Python.framework/Versions").glob("*/bin"), reverse=True)
+    for root in _CONDA_ROOTS:
+        dirs.append(home / root / "bin")
+        dirs += sorted((home / root).glob("envs/*/bin"))
+    dirs += sorted(home.glob(".pyenv/versions/*/bin"), reverse=True)
+    for pattern in (".venvs/*/bin", ".virtualenvs/*/bin", "venv/bin", ".venv/bin"):
+        dirs += sorted(home.glob(pattern))
+    return dirs
+
+
+def find_hybrid_executable(home: Optional[Path] = None) -> Optional[str]:
+    """Absolute path to `opendataloader-pdf-hybrid`, or None if it isn't installed."""
+    on_path = shutil.which(HYBRID_SERVER_EXECUTABLE)
+    if on_path:
+        return on_path
+    for directory in _candidate_bin_dirs(home):
+        candidate = directory / HYBRID_SERVER_EXECUTABLE
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
+
+
+def _child_env() -> dict:
+    return {k: v for k, v in os.environ.items() if k not in _PYTHON_ENV_VARS}
 
 
 @dataclass
@@ -118,16 +177,18 @@ class HybridServerManager:
             self._state = "starting"
             self._message = "Launching hybrid backend..."
 
-        if shutil.which(HYBRID_SERVER_EXECUTABLE) is None:
+        executable = find_hybrid_executable()
+        if executable is None:
             with self._lock:
                 self._state = "error"
                 self._message = (
-                    f"'{HYBRID_SERVER_EXECUTABLE}' isn't on PATH. Install the hybrid extra with: "
-                    'pip install "opendataloader-pdf[hybrid]" (in the same venv the app runs from).'
+                    f"Couldn't find '{HYBRID_SERVER_EXECUTABLE}' on PATH or in common install "
+                    "locations (~/odl-hybrid, pipx, conda, pyenv, ~/.venvs). Install it with: "
+                    'python3 -m venv ~/odl-hybrid && ~/odl-hybrid/bin/pip install "opendataloader-pdf[hybrid]"'
                 )
             return self.status()
 
-        cmd = [HYBRID_SERVER_EXECUTABLE, "--port", str(self.port)]
+        cmd = [executable, "--port", str(self.port)]
         if force_ocr:
             cmd.append("--force-ocr")
         # --ocr-lang applies whenever OCR runs at all, not only under
@@ -146,6 +207,7 @@ class HybridServerManager:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
+                env=_child_env(),
             )
         except OSError as exc:
             with self._lock:
