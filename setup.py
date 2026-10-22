@@ -72,7 +72,7 @@ OPTIONS = {
         "CFBundleName": "ODL Desktop",
         "CFBundleDisplayName": "ODL Desktop",
         "CFBundleIdentifier": "local.odl-desktop",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleShortVersionString": "0.1.1",
         "NSHighResolutionCapable": True,
     },
 }

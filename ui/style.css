@@ -419,8 +419,20 @@ fieldset.field-group legend {
   border-radius: var(--radius-sm);
 }
 .result-row:hover { background: var(--bg); }
+.result-row { flex-wrap: wrap; }
+.result-warning {
+  flex-basis: 100%;
+  margin: 0 0 2px 22px;
+  padding: 6px 9px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #6B4F17;
+  background: var(--warn-soft);
+  border-radius: var(--radius-sm);
+}
 .result-icon { flex-shrink: 0; }
 .result-icon.ok { color: var(--success); }
+.result-icon.warn { color: var(--warn); }
 .result-icon.fail { color: var(--danger); }
 .result-name { font-family: var(--font-mono); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .result-reveal {

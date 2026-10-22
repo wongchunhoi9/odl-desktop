@@ -15,6 +15,8 @@ Python + [pywebview](https://pywebview.flowrl.com/), packaged as a double-clicka
   reading order, extract or embed images, sanitize emails/phones/IPs/URLs out of the text.
 - **Optional hybrid OCR backend** for scanned or image-heavy PDFs, with a language picker covering
   the 86 languages EasyOCR supports and adjustable formula/picture-description enrichment.
+- **Empty-result warnings** — if a conversion produces an empty Markdown file (typically a scanned
+  PDF converted without OCR), the result row shows ⚠ with advice for your current settings.
 - **Settings persist** across launches (`~/Library/Application Support/ODL Desktop/prefs.json`).
 - **In-app Java check** — the one thing the packaged app doesn't bundle. If Java's missing, a
   banner offers a direct download link and a one-click re-check, no relaunch needed.
@@ -50,6 +52,89 @@ Then start/stop it from the app's "Hybrid/OCR Backend" panel. The app finds
 through `PATH` — `~/odl-hybrid`, `~/.local/bin` (pipx / `pip --user`), `~/Library/Python/*/bin`,
 Homebrew, conda/miniconda/miniforge (base and named envs), pyenv, and `~/.venvs`/`~/.virtualenvs`.
 If it can't find one, the panel says where it looked and how to install it.
+
+## User guide
+
+### Quick start
+
+1. Open the app. If a yellow banner says Java is missing, click **Download Java…**, install it,
+   then click **Re-check**.
+2. Add PDFs: **drag and drop** PDFs or a folder onto the window, or use **Choose Files…** /
+   **Choose Folder…**. Tick **Include subfolders** if a dropped/chosen folder has PDFs in nested
+   folders.
+3. Pick an **Output folder** (defaults to `~/Documents/OpenDataLoader Output`).
+4. Tick the **Output formats** you want and adjust options if needed (see below).
+5. Click **Convert**. Each file gets a result row — ✓ done, ⚠ done but check it, ✕ failed. Use
+   **Reveal in Finder** on a row or **Open Output Folder**.
+
+Your settings are remembered between launches.
+
+### Output formats
+
+| Format | File written (for `report.pdf`) |
+|---|---|
+| Markdown | `report.md` |
+| JSON (with bounding boxes) | `report.json` |
+| HTML | `report.html` |
+| PDF (tagged) — an accessibility-tagged copy | `report_tagged.pdf` |
+| Markdown + images | `report.md` (legacy option — upstream deprecates it; use **Markdown** plus the **Images** setting instead) |
+
+All files go into one flat output folder named after the PDF. If two inputs would produce the same
+name (e.g. two `report.pdf` files from different subfolders), the app stops before converting and
+tells you which ones, rather than letting one overwrite the other.
+
+### Conversion options
+
+| Option | What it does |
+|---|---|
+| Include headers & footers | Off by default — repeated page headers/footers are dropped from the output. |
+| Table detection | *Default* finds tables by their borders; *Cluster* also uses spacing, for tables without ruling lines. |
+| Reading order | *XY-Cut* reconstructs the natural reading order of multi-column pages; *Off* skips that step. |
+| Images | *Off*, *Embedded* (base64 inside the file), or *External files* (written as separate image files). Then choose PNG or JPEG. |
+| Sanitize sensitive data | Masks emails, phone numbers, IPs and URLs in the text. |
+| Page range | e.g. `1,3,5-7`. Applies only when you convert **a single file**; it's ignored for batches. |
+
+### Scanned PDFs and OCR
+
+A PDF made from scanned pages contains pictures of text, not text. Converting it normally gives an
+**empty file** — the app can't read the picture without OCR. To get the text:
+
+1. **Install the OCR backend once** (it's separate and large — see [Hybrid/OCR setup](#hybridocr-setup)).
+2. In the **Hybrid / OCR Backend** panel, select the **OCR languages** that match your document
+   (⌘-click to pick several; default is English only). These are fixed when the backend starts —
+   change them, then restart the backend.
+3. Click **Start Backend** and wait for it to say *Running*. The first start with a new language
+   downloads its model, so it needs internet and can take a minute or more.
+4. Tick **Enable hybrid processing for this run** and set **Mode** to **Full**.
+5. Click **Convert**.
+
+**Use Full for scans.** *Auto* only sends "complex" pages to OCR, and a scanned page isn't one — on a
+test scan, Auto returned nothing while Full returned the whole text. *Force OCR* is for something
+different: re-reading pages that *already have* a text layer; a plain scan doesn't need it.
+
+The same panel has two optional extras — **Formula recognition** (equations as LaTeX) and **Picture
+descriptions** (alt text for images). Tick them *before* starting the backend, and use Mode **Full**
+so their output reaches the file.
+
+If a Markdown file comes out empty, the result row shows ⚠ with advice matching your settings.
+OCR results can occasionally come back empty even with everything set correctly (we saw it a few
+times in ~25 test runs, cause unknown) — **converting again normally fixes it**. The
+app stops the backend when you quit.
+
+### Troubleshooting
+
+| You see | Do this |
+|---|---|
+| ⚠ "The Markdown output is empty…" | Almost always a scanned PDF — follow [Scanned PDFs and OCR](#scanned-pdfs-and-ocr). If you already used Full mode, check the languages and convert once more. |
+| **Convert** is greyed out | It needs at least one PDF, an output folder, and Java (see the banner). |
+| Banner: Java not found | Install Java 11+ (**Download Java…**), then **Re-check** — no relaunch needed. |
+| "Couldn't find 'opendataloader-pdf-hybrid'…" | The OCR backend isn't installed where the app looks — run the install command in [Hybrid/OCR setup](#hybridocr-setup). |
+| Backend stays on *Starting…* | The first start can take minutes (model downloads). If it errors, the panel shows the backend's last output. |
+| Backend won't start: port in use | Change the **Port** field (default 5002) and start again. |
+| "These input files share the same name…" | Rename them or convert the folders separately. |
+| Dropped something and it was skipped | Only PDFs and folders are accepted; the log notes what was skipped. |
+| macOS says the app can't be opened | Right-click the app → **Open** (once). It isn't notarized. |
+| Want to reset all settings | Quit the app and delete `~/Library/Application Support/ODL Desktop/prefs.json`. |
 
 ## Project layout
 
