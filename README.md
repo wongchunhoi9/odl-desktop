@@ -38,10 +38,18 @@ you need an Intel build.
 
 ### Hybrid/OCR setup
 
-The hybrid backend is a separate, optional install: `pip install "opendataloader-pdf[hybrid]"`
-into any Python on your `PATH`, then start/stop it from the app's "Hybrid/OCR Backend" panel. Skip
-this unless you're converting scanned PDFs — the panel explains what's missing if you try to start
-it without that installed.
+The hybrid backend is a separate, optional install, and it's large (~1.4GB — it pulls in
+`docling`/`torch`/OCR engines). Skip it unless you're converting scanned PDFs. Easiest setup:
+
+```bash
+python3 -m venv ~/odl-hybrid && ~/odl-hybrid/bin/pip install "opendataloader-pdf[hybrid]"
+```
+
+Then start/stop it from the app's "Hybrid/OCR Backend" panel. The app finds
+`opendataloader-pdf-hybrid` on your `PATH` and in the usual places a Finder-launched app can't see
+through `PATH` — `~/odl-hybrid`, `~/.local/bin` (pipx / `pip --user`), `~/Library/Python/*/bin`,
+Homebrew, conda/miniconda/miniforge (base and named envs), pyenv, and `~/.venvs`/`~/.virtualenvs`.
+If it can't find one, the panel says where it looked and how to install it.
 
 ## Project layout
 
@@ -170,8 +178,12 @@ not implemented yet.
   always know whether a background process is alive.
 - Settings persistence is a flat JSON file, not a real settings UI.
 - `backend/hybrid_server.py` launches the hybrid backend via the `opendataloader-pdf-hybrid`
-  console script installed by the `opendataloader-pdf[hybrid]` extra. If a future version of the
-  package renames or changes that entry point, update `HYBRID_SERVER_EXECUTABLE` there.
+  console script installed by the `opendataloader-pdf[hybrid]` extra, located by
+  `find_hybrid_executable()` (`PATH` first, then `_candidate_bin_dirs()`). The child process gets the
+  app's environment minus the Python/dyld variables the py2app launcher sets (`_PYTHON_ENV_VARS`) —
+  without that, a venv-installed backend inherits `PYTHONHOME` pointing into the `.app` bundle and
+  crashes at startup. If a future version of the package renames or moves that entry point, update
+  `HYBRID_SERVER_EXECUTABLE` there.
 - The OCR language picker (`ui/app.js`'s `EASYOCR_LANGUAGES`) is a hand-copied snapshot of
   `easyocr.config.all_lang_list` with human-readable names — it assumes the hybrid backend's
   default `--ocr-engine` (easyocr). Tesseract/RapidOCR/ocrmac use different code systems entirely
