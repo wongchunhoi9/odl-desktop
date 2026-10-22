@@ -548,8 +548,9 @@ function onConversionComplete(result) {
     const li = document.createElement("li");
     li.className = "result-row";
     const name = f.input_path.split("/").pop();
+    const state = !f.ok ? "fail" : f.warning ? "warn" : "ok";
     li.innerHTML = `
-      <span class="result-icon ${f.ok ? "ok" : "fail"}">${f.ok ? "✓" : "✕"}</span>
+      <span class="result-icon ${state}">${{ ok: "✓", warn: "⚠", fail: "✕" }[state]}</span>
       <span class="result-name" title="${escapeHtml(f.input_path)}">${escapeHtml(name)}</span>
     `;
     if (f.ok && f.outputs && f.outputs[0]) {
@@ -561,6 +562,13 @@ function onConversionComplete(result) {
     } else if (f.error) {
       appendLog(`${name}: ${f.error}`);
     }
+    if (f.warning) {
+      const warning = document.createElement("p");
+      warning.className = "result-warning";
+      warning.textContent = f.warning;
+      li.appendChild(warning);
+      appendLog(`${name}: ${f.warning}`);
+    }
     list.appendChild(li);
   }
 
@@ -568,7 +576,12 @@ function onConversionComplete(result) {
     document.getElementById("btn-open-output").classList.remove("hidden");
   }
 
-  appendLog(result.ok ? "Done." : "Finished with errors — see details above.");
+  const hasWarnings = (result.files || []).some((f) => f.warning);
+  appendLog(
+    !result.ok ? "Finished with errors — see details above."
+    : hasWarnings ? "Done, with warnings — see the ⚠ items above."
+    : "Done."
+  );
   updateConvertEnabled();
 }
 

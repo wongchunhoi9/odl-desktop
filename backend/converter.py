@@ -41,6 +41,7 @@ class FileResult:
     ok: bool
     outputs: list = field(default_factory=list)
     error: Optional[str] = None
+    warning: Optional[str] = None  # produced a file, but it looks wrong (e.g. empty)
 
 
 @dataclass
@@ -48,6 +49,38 @@ class ConversionResult:
     ok: bool
     files: list  # list[FileResult]
     error: Optional[str] = None
+
+
+# Only Markdown can be checked for "no text" cheaply — JSON/HTML always carry
+# structure/boilerplate even when a scanned page yields no text.
+_EMPTY_CHECKABLE_FORMATS = ("markdown", "markdown-with-images")
+
+
+def _empty_output_hint(settings: dict) -> str:
+    """Advice for an empty Markdown result, based on how hybrid/OCR was set."""
+    if not settings.get("hybrid_enabled"):
+        return (
+            "The Markdown output is empty. If this is a scanned PDF (page images, no text "
+            "layer), start the Hybrid/OCR backend, tick \"Enable hybrid processing for this "
+            "run\", and set Mode to Full."
+        )
+    if settings.get("hybrid_mode", "auto") != "full":
+        return (
+            "The Markdown output is empty. Auto mode only sends complex pages to OCR — for "
+            "scanned PDFs set Mode to Full."
+        )
+    return (
+        "The Markdown output is empty even with OCR on. Check the OCR language matches the "
+        "document (restart the backend after changing it); a language's first use downloads "
+        "its model, so one retry may be needed."
+    )
+
+
+def _is_blank_text_file(path: str) -> bool:
+    try:
+        return not Path(path).read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return False
 
 
 def _gather_input_files(input_paths: list, include_subfolders: bool) -> list:
@@ -111,20 +144,25 @@ def build_convert_kwargs(settings: dict, input_files: list, output_dir: str) -> 
     return kwargs
 
 
-def _collect_results(input_files: list, output_dir: str, formats: list) -> list:
+def _collect_results(input_files: list, output_dir: str, formats: list,
+                     empty_hint: str = "") -> list:
     out_dir = Path(output_dir)
     results = []
     for f in input_files:
         stem = f.stem
         outputs = []
+        blank_text_outputs = []
         for fmt in formats:
             template = FORMAT_FILENAME_TEMPLATES.get(fmt, "{stem}")
             candidate = out_dir / template.format(stem=stem)
             if candidate.exists():
                 outputs.append(str(candidate))
+                if fmt in _EMPTY_CHECKABLE_FORMATS and _is_blank_text_file(str(candidate)):
+                    blank_text_outputs.append(str(candidate))
         results.append(
             FileResult(input_path=str(f), ok=bool(outputs), outputs=outputs,
-                       error=None if outputs else "No output file found after conversion.")
+                       error=None if outputs else "No output file found after conversion.",
+                       warning=empty_hint if blank_text_outputs else None)
         )
     return results
 
@@ -175,6 +213,7 @@ def run_conversion(
         return ConversionResult(ok=False, files=[], error=f"Conversion failed: {exc}")
 
     report("Verifying outputs...")
-    results = _collect_results(input_files, output_dir, settings.get("formats") or ["markdown"])
+    results = _collect_results(input_files, output_dir, settings.get("formats") or ["markdown"],
+                               empty_hint=_empty_output_hint(settings))
     overall_ok = any(r.ok for r in results)
     return ConversionResult(ok=overall_ok, files=results)

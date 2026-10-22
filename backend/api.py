@@ -159,6 +159,7 @@ class Api:
                         "ok": f.ok,
                         "outputs": f.outputs,
                         "error": f.error,
+                        "warning": f.warning,
                     }
                     for f in result.files
                 ],
