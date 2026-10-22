@@ -4,6 +4,7 @@ from pathlib import Path
 
 import webview
 
+from backend import dragdrop
 from backend.api import Api
 from backend.hybrid_server import manager as hybrid_manager
 
@@ -30,7 +31,7 @@ def main():
 
     window.events.closed += on_closed
 
-    webview.start(debug=False)
+    webview.start(dragdrop.install, (window, api._emit), debug=False)
 
 
 if __name__ == "__main__":

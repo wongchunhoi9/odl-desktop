@@ -9,6 +9,7 @@ Python + [pywebview](https://pywebview.flowrl.com/), packaged as a double-clicka
 
 ## Features
 
+- **Drag and drop** PDFs or folders onto the window, or use the file/folder pickers.
 - **Convert** PDFs to Markdown, JSON, HTML, or a tagged/accessibility PDF — batch a whole folder
   (optionally recursive), pick a page range, strip headers/footers, control table detection and
   reading order, extract or embed images, sanitize emails/phones/IPs/URLs out of the text.
@@ -49,6 +50,7 @@ odl-desktop/
 ├── app.py                    # entry point — creates the pywebview window, wires the JS↔Python bridge
 ├── backend/
 │   ├── api.py                 # the Api class exposed to the frontend (window.pywebview.api.*)
+│   ├── dragdrop.py            # native drag-and-drop of PDFs/folders onto the window (Python-side; see file docstring)
 │   ├── converter.py           # wraps opendataloader_pdf.convert(); UI settings → CLI kwargs → results
 │   ├── hybrid_server.py       # start/stop/health-check for the local hybrid/OCR backend process
 │   ├── java_check.py          # verifies Java 11+ is on PATH before Convert is enabled

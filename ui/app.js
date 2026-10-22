@@ -146,6 +146,7 @@ async function init() {
 
   window.addEventListener("odl:progress", (e) => appendLog(e.detail.message));
   window.addEventListener("odl:complete", (e) => onConversionComplete(e.detail));
+  window.addEventListener("odl:dropped", (e) => onFilesDropped(e.detail));
 
   updateConvertEnabled();
 }
@@ -278,33 +279,20 @@ function wireStaticControls() {
     }
   });
 
-  // Dropzone. Note: extracting a real filesystem path from an HTML5 drop
-  // event depends on the underlying webview engine exposing `file.path`.
-  // On pywebview's macOS (WKWebView) backend this isn't guaranteed across
-  // versions, so we try it and fall back to prompting the user to use the
-  // "Choose Files…" button if no usable path comes through.
+  // Dropzone. The actual drop is handled in Python (backend/dragdrop.py) —
+  // WKWebView doesn't expose file paths to page JS — and arrives here as an
+  // 'odl:dropped' event. This only does the visual highlight, and cancels
+  // dragover/drop page-wide so a stray drop can't navigate to the dropped file.
   const dropzone = document.getElementById("dropzone");
   ["dragenter", "dragover"].forEach((evt) =>
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      dropzone.classList.add("dragover");
-    })
+    dropzone.addEventListener(evt, () => dropzone.classList.add("dragover"))
   );
   ["dragleave", "drop"].forEach((evt) =>
-    dropzone.addEventListener(evt, (e) => {
-      e.preventDefault();
-      dropzone.classList.remove("dragover");
-    })
+    dropzone.addEventListener(evt, () => dropzone.classList.remove("dragover"))
   );
-  dropzone.addEventListener("drop", (e) => {
-    const files = Array.from(e.dataTransfer.files || []);
-    const paths = files.map((f) => f.path).filter(Boolean);
-    if (paths.length) {
-      addInputPaths(paths);
-    } else if (files.length) {
-      appendLog("Couldn't read a filesystem path from the dropped item(s) — use \"Choose Files…\" instead.");
-    }
-  });
+  ["dragover", "drop"].forEach((evt) =>
+    window.addEventListener(evt, (e) => e.preventDefault())
+  );
 
   // Any settings field: persist on change.
   document
@@ -372,6 +360,13 @@ function addInputPaths(paths) {
   }
   renderChips();
   updateConvertEnabled();
+}
+
+function onFilesDropped({ paths, skipped }) {
+  addInputPaths(paths);
+  if (skipped) {
+    appendLog(`Skipped ${skipped} dropped item(s) — only PDFs and folders are supported.`);
+  }
 }
 
 function removeInputPath(p) {
